@@ -234,7 +234,7 @@ def parse_sites(filename):
 	#computes the reverse complement for each site and also adds it into the sites array
 	temp_sites = []
 	for site in sites:
-		temp_sites.append(reverseComp(site))
+		temp_sites.append(reverse_complement(site))
 
 	#adds temp_sites to sites
 	sites += temp_sites
@@ -266,10 +266,7 @@ def reverse_complement(sequence):
 
 def validseq(sequence):
 	for site in SITES:
-		if dna_sequence.find(site) == -1:
-			continue
-			#can eliminate else clause?
-		else:
+		if dna_sequence.find(site) != -1:
 			return False
 	return True
 
@@ -305,14 +302,14 @@ def parse_codonfreq(filename):
 
 	for aa in AMINO_ACID_TO_CODON:
 		total = 0.0
-		aa_codon_list = AMINO_ACID_TO_CONDON[aa] #gets all codons (in a list) that represent current amino acid
+		aa_codon_list = AMINO_ACID_TO_CODON[aa] #gets all codons (in a list) that represent current amino acid
 		for codon in aa_codon_list:
 			#add this codon's freq to total
-			total += raw_codon_freqs[codon]
+			total += raw_codon_freqs[codon.lower()]
 
 		#go through all codons again, this time assign the new codon freq to weighted_codon_freqs
 		for codon in aa_codon_list:
-			weighted_codon_freqs[codon] = raw_codon_freqs[codon]/total
+			weighted_codon_freqs[codon.lower()] = raw_codon_freqs[codon.lower()]/total
 
 	return weighted_codon_freqs
 
@@ -498,7 +495,7 @@ def makefixedsites(output_seq):
 	#following example output, start of transcription site = 0, 40 basepairs before it, so it will now have an offset of 40
 
 	#iterate through the indices of the output sequence
-	for i in range(output_seq.length):
+	for i in range(len(output_seq)):
 		#sequence is -35 sequence that cannot change
 		if (i >= 0 and i <= 5):
 			CHANGEABLE[i] = 1
@@ -515,10 +512,10 @@ def makefixedsites(output_seq):
 				else:
 					CHANGEABLE[i] = 1
 			#Shine Dalgarno sequence that must br present in the sequence
-			elif(i> 35+LENGTH_OF_X and i <= 41+LENGTH_OF_X):
+			elif(i> 35+LENGTH_OF_X and i <= 41+ LENGTH_OF_X):
 				CHANGEABLE[i] = 1
 			#filler bases that we can arbitrarily change if there is a restriction enzyme/reverse complement present in the output_seq
-			elif(i > 41+LENGTH_OF_X) and i <= 43 +LENGTH_OF_X):
+			elif(i > 41+LENGTH_OF_X and i <= 43 + LENGTH_OF_X):
 				CHANGEABLE[i] = 0
 			#start of the DNA coding region
 			else:	
@@ -529,25 +526,26 @@ def makefixedsites(output_seq):
 					CHANGEABLE[i] = 0
 				
 		else:
+			CHANGEABLE[i] = 0
 			#filler sequence before the terminator sequence that we can arbitrarily change by basepair
-			if(i <= 44+LENGTH_OF_X+LENGTHS[1] + FILLER_SIZE):
-				CHANGEABLE[i] = 0
+			#if(i <= 44+LENGTH_OF_X+LENGTHS[1] + FILLER_SIZE):
+				#CHANGEABLE[i] = 0
 			#terminator sequence that we cannot change
-			else:
-				CHANGEABLE[i] = 1
+			#else:
+				#CHANGEABLE[i] = 1
 
 def checkconstraints(output_seq,aa_sequence):
 	#Store the array of all of the fixed sites of the output sequence
 	SITES_NEEDED = makefixedsites(output_seq)
 
 	#Keep changing the sequence until we find a valid sequence
-	while(!validseq(output_seq)):
+	while(validseq(output_seq) == False):
 		#for all of the restriction sites, check where the restriction strict occurs, and store that in the variable index
 		for site in SITES:
-			index = output_seq.index(site):
+			index = output_seq.index(site)
 			#if the CHANGEABLE list suggests that we cannot change the certain base, lets keep incrementing the index
 			while(CHANGEABLE[index] == 1):
-				index += 
+				index +=  1
 			#if the index is within the coding region of the DNA, we have to compute the offset from the index to the start of the DNA sequence
 			if(index > 43 + LENGTH_OF_X and i <= 43 + LENGTH_OF_X + LENGTHS[1]):
 				index_offset = index - 44 - LENGTH_OF_X
@@ -621,57 +619,6 @@ def generate_upstream(filename):
 	UPPERCASE VS LOWERCASE CHECK
 	EFFECTOR IS IN RNA NOT DNA
 	"""
-
-	upstream_list = []
-
-	#-35 sequence
-	upstream_list.append(NEGATIVE_35_SEQUENCE)
-
-	#find how long the filler needs to be, this will depend on the length of the -35 sequence
-	index_end = -35 + len(NEGATIVE_35_SEQUENCE) #finds where -35 seq ends
-	filler_length = -10 - index_end #finds length between end of -35 sequence and -10 sequence. this will be the filler length
-
-	upstream_list.append(generate_random_seq(filler_length))
-
-	upstream_list.append(PRIBNOW_BOX)
-
-	#find how long the filler needs to be, this will depend on the length of the -10 sequence
-	index_end = -10 + len(PRIBNOW_BOX) #finds where -10 seq ends
-	filler_length = 0 - index_end #finds length between end of -10 sequence and Start Transcription Site
-
-	upstream_list.append(generate_random_seq(filler_length))
-
-	seq_list = parse_fasta(filename)
-	effector = seq_list[0].sequence
-
-	riboswitch_sequence = ''
-	if 'a' not in effector:
-		riboswitch_comps = generate_alternative_riboswitch(effector)
-		riboswitch_comps = generate_riboswitch(effector)
-		riboswitch_sequence = ''
-		for components in riboswitch_comps:
-			riboswitch_sequence += components
-
-		LOOP_OFFSET = riboswitch_comps[0] + riboswitch_comps[1] - 1
-		LOOP_LENGTH = riboswitch_comps[2].length
-			
-		LENGTH_OF_X = riboswitch_sequence.length
-
-
-	else:
-		riboswitch_comps = generate_riboswitch(effector)
-		riboswitch_sequence = ''
-		for components in riboswitch_comps:
-			riboswitch_sequence += components
-
-		LOOP_OFFSET = riboswitch_comps[0] + riboswitch_comps[1] - 1
-		LOOP_LENGTH = riboswitch_comps[2].length
-			
-		LENGTH_OF_X = riboswitch_sequence.length
-
-
-	upstream_list.append(riboswitch_sequence)
-
 	def generate_riboswitch(effector):
 		index_a = effector.find('a')
 		temp = effector[::-1].find('a')
@@ -746,13 +693,64 @@ def generate_upstream(filename):
 		return riboswitch_sequence
 
 
+	upstream_list = []
+
+	#-35 sequence
+	upstream_list.append(NEGATIVE_35_SEQUENCE)
+
+	#find how long the filler needs to be, this will depend on the length of the -35 sequence
+	index_end = -35 + len(NEGATIVE_35_SEQUENCE) #finds where -35 seq ends
+	filler_length = -10 - index_end #finds length between end of -35 sequence and -10 sequence. this will be the filler length
+
+	upstream_list.append(generate_random_seq(filler_length))
+
+	upstream_list.append(PRIBNOW_BOX)
+
+	#find how long the filler needs to be, this will depend on the length of the -10 sequence
+	index_end = -10 + len(PRIBNOW_BOX) #finds where -10 seq ends
+	filler_length = 0 - index_end #finds length between end of -10 sequence and Start Transcription Site
+
+	upstream_list.append(generate_random_seq(filler_length))
+
+	seq_list = parse_fasta(filename)
+	effector = seq_list[0].sequence
+
+	riboswitch_sequence = ''
+	if 'a' not in effector:
+		riboswitch_comps = generate_alternative_riboswitch(effector)
+		riboswitch_comps = generate_riboswitch(effector)
+		riboswitch_sequence = ''
+		for components in riboswitch_comps:
+			riboswitch_sequence += components
+
+		LOOP_OFFSET = len(riboswitch_comps[0]) + len(riboswitch_comps[1]) - 1
+		LOOP_LENGTH = len(riboswitch_comps[2])
+			
+		LENGTH_OF_X = len(riboswitch_sequence)
+
+
+	else:
+		riboswitch_comps = generate_riboswitch(effector)
+		riboswitch_sequence = ''
+		for components in riboswitch_comps:
+			riboswitch_sequence += components
+
+		LOOP_OFFSET = len(riboswitch_comps[0]) + len(riboswitch_comps[1]) - 1
+		LOOP_LENGTH = len(riboswitch_comps[2])
+			
+		LENGTH_OF_X = len(riboswitch_sequence)
+
+
+	upstream_list.append(riboswitch_sequence)
+
 	upstream_list.append(SHINE_DALGARNO)
 
 	index_end = -8 + len(SHINE_DALGARNO)
 	filler_length = index_end - 0
 
 	upstream_list.append(generate_random_seq(filler_length))
-
+	upstream_sequence = ''
+	upstream_sequence = ''.join(upstream_list)
 	return upstream_sequence
 
 def generate_random_seq(length, cg_rich=False):
@@ -764,20 +762,24 @@ def generate_random_seq(length, cg_rich=False):
 
 	returns DNA sequence (string)
 	"""
+	sequence = ''
 	if cg_rich:
 		CG_num=length*3/4 # the number of C's and G's will always be at least 75 percent of the length of the entire sequence
 		rand_CG_num=random.randint(CG_num,length) # the number of C's and G's will be between 75% and 100% of the entire sequence length
 		CGpool=['C','G']
-		for i in range(rand_CG_number):
+		for i in range(rand_CG_num):
 			CGseq=random.choice(CGpool)
 		
-		AT_number=length-CG_number # the A's and T's will fill in the rest of the sequence
+		AT_number=length-CG_num # the A's and T's will fill in the rest of the sequence
 		ATpool=['A','T']
 		for j in range(AT_number):
 			ATseq=random.choice(ATpool)
 
 		comb=CGseq+ATseq # combine CGseq and ATseq
-		sequence=random.shuffle(comb) # shuffle the order of nucleotide
+		seq_list = []
+		for c in comb:
+			seq_list.append(c)
+		sequence=''.join(random.sample(seq_list,len(seq_list))) # shuffle the order of nucleotide
 
 
 	else :
@@ -811,7 +813,7 @@ def generate_random_loop(length):
 	G_pool = ['A','C','T']
 	T_pool = ['A','C','G']
 	other_half=''
-	for nuc in half_seq:
+	for nuc in first_half_seq:
 		if nuc == 'A':
 			other_half += random.choice(A_pool)
 		elif nuc == 'C':
@@ -821,7 +823,7 @@ def generate_random_loop(length):
 		elif nuc == 'T':
 			other_half += random.choice(T_pool)
 	# because the entire sequence is to form a loop, the "other_half" needs to be reversed in its order
-	second_half_seq = reversed(other_half)  
+	second_half_seq = other_half[::-1] 
 
 	# determine if rand is an odd number;
 	# if it is an even number, concatenate "first_half_seq" and "second_half_seq" and output the resulting sequence;
@@ -856,7 +858,7 @@ def generate_terminator():
 
 	second_half=reverse_complement(first_half) # produce reverse complementary sequence of first_half 
 
-	middle = generate_random_seq() # produce the loop portion 
+	middle = generate_random_loop(random.randint(4,8)) # produce the loop portion 
 
 	rand_Ttail=random.randint(8,12) # randomly choose the length of poly T tail
 	poly_Ttail='T'*rand_Ttail # generate the poly T tail sequence
@@ -864,7 +866,7 @@ def generate_terminator():
 	rand_chunk=random.randint(15,20) # randomly choose the length of "chunk sequence"
 	chunk_seq=generate_random_seq(rand_chunk) # generate the chunk sequence
 
-	FILLER_SIZE = chunk_seq.length
+	FILLER_SIZE = len(chunk_seq)
 
 	terminator_sequence=chunk_seq+first_half+middle+second_half+poly_Ttail # concatenate the 5 segments to produce the finalized terminator sequence
 
@@ -902,7 +904,7 @@ def parse_params(filename):
 				sys.exit(1)
 		elif (count >= 1 and line != None):
 			raise IOError("Error: Parameter file not properly formed, " + line)
-				sys.exit(1)
+			sys.exit(1)
 	return value
 
 
@@ -927,20 +929,33 @@ output.append(generate_terminator())
 #output = []
 
 upstream_seq = generate_upstream(EFFECTOR_FILENAME)
-upstreamlength = upstream_seq.length
+upstreamlength = len(upstream_seq)
 LENGTHS.append(upstreamlength)
 #output.append(upstream_seq)
 
 
 
-aa_seq = generate_aa_seq(PROTEIN_FILENAME)
-aaseqlength = aa_seq.lenth
+aa_seq = generate_aa_seq(parse_fasta(PROTEIN_FILENAME))
+aaseqlength = len(aa_seq)
 LENGTHS.append(aaseqlength)
 coding_seq = convert_aa_to_dna(aa_seq, parse_codonfreq(CODON_FREQ_FILENAME))
 
 #output.append(coding_seq)
 
 term_seq = generate_terminator()
-termseqlength = term_seq.length
+termseqlength = len(term_seq)
 LENGTHS.append(termseqlength)
 #output.append(term_seq)
+
+
+N_variant = parse_params(PARAMS_FILENAME)
+
+seq_list = parse_fasta(PROTEIN_FILENAME)
+
+SITES = parse_sites(RESTRIC_ENZ_FILENAME)
+
+sequence = generate_aa_seq(seq_list)
+print(sequence)
+sequence = convert_aa_to_dna(sequence, parse_codonfreq(CODON_FREQ_FILENAME))
+print(sequence)
+
