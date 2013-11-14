@@ -48,10 +48,11 @@ DEFAULT_EFFECTOR = 'AAUCCUCCGG'
 TETRA_LOOP = 'TTCG'
 UPSTREAM_LENGTH = []
 LENGTHS = []
-CHANGABLE= []
-LENGTH_OF_X = 0
-LOOP_OFFSET = 0
-FILLER_SIZE = 0
+CHANGEABLE= []
+LENGTH_OF_X = []
+LOOP_OFFSET = []
+LOOP_LENGTH = []
+FILLER_SIZE = []
 
 
 #terminator
@@ -265,9 +266,26 @@ def reverse_complement(sequence):
 
 
 def validseq(sequence):
+
 	for site in SITES:
-		if dna_sequence.find(site) != -1:
-			return False
+		index = sequence.find(site)
+		if index == -1:
+			print("program continued")
+			continue
+		else:
+			if(CHANGEABLE[index] == 1):
+				print("it is changeable")
+				if(index >= 44 + LENGTH_OF_X[0] and index <= 44 + LENGTH_OF_X[0] +LENGTHS[1]):
+					print("its within the coding segment")
+					return False
+				else:
+					print("progam continued")
+					continue
+					
+			else:
+				"something is wrong here for some reason"
+				return False
+
 	return True
 
 
@@ -406,19 +424,7 @@ def generate_aa_seq(seq_list):
 
 	return homologybuilderfinalmega(seq_list)
 
-
-def convert_aa_to_dna(aa_sequence, codon_freq):
-	"""Given an amino acid sequence and the amino acid codon frequencies, 
-	generates the dna sequence that codes for the aa sequence.
-
-	aa_sequence - amino acid sequence (string)
-	codon_freq - codons and their (weighted) frequencies (string)
-
-	returns dna sequence (string)
-	"""
-	proteinsequence = aa_sequence
-
-	def convert_aa_to_codon(aa):
+def convert_aa_to_codon(aa,codon_freq):
 		"""converts a given amino acid to a codon by using the codon frequency table
 		aa - amino acid (string)
 
@@ -436,6 +442,19 @@ def convert_aa_to_dna(aa_sequence, codon_freq):
 		#error handling, code shoudn't reach here since a codon should be returned in the for loop
 		assert False, "convert_aa_to_codon failed, codon not returned"
 
+def convert_aa_to_dna(aa_sequence, codon_freq):
+	"""Given an amino acid sequence and the amino acid codon frequencies, 
+	generates the dna sequence that codes for the aa sequence.
+
+	aa_sequence - amino acid sequence (string)
+	codon_freq - codons and their (weighted) frequencies (string)
+
+	returns dna sequence (string)
+	"""
+	proteinsequence = aa_sequence
+
+	
+
 	def shuffler(x, n = 1000):
 		count = 0
 		def listwrong(x2):
@@ -452,26 +471,26 @@ def convert_aa_to_dna(aa_sequence, codon_freq):
 			x[index] = value
 		return x
 		
-	G = shuffler([convert_aa_to_codon("G") for x in range(proteinsequence.count('G'))])
-	A = shuffler([convert_aa_to_codon("A") for x in range(proteinsequence.count('A'))])
-	V = shuffler([convert_aa_to_codon("V") for x in range(proteinsequence.count('V'))])
-	L = shuffler([convert_aa_to_codon("L") for x in range(proteinsequence.count('L'))])
-	I = shuffler([convert_aa_to_codon("I") for x in range(proteinsequence.count('I'))])
-	M = shuffler([convert_aa_to_codon("M") for x in range(proteinsequence.count('M'))])
-	F = shuffler([convert_aa_to_codon("F") for x in range(proteinsequence.count('F'))])
-	W = shuffler([convert_aa_to_codon("W") for x in range(proteinsequence.count('W'))])
-	P = shuffler([convert_aa_to_codon("P") for x in range(proteinsequence.count('P'))])
-	S = shuffler([convert_aa_to_codon("S") for x in range(proteinsequence.count('S'))])
-	T = shuffler([convert_aa_to_codon("T") for x in range(proteinsequence.count('T'))])
-	C = shuffler([convert_aa_to_codon("C") for x in range(proteinsequence.count('C'))])
-	Y = shuffler([convert_aa_to_codon("Y") for x in range(proteinsequence.count('Y'))])
-	N = shuffler([convert_aa_to_codon("N") for x in range(proteinsequence.count('N'))])
-	Q = shuffler([convert_aa_to_codon("Q") for x in range(proteinsequence.count('Q'))])
-	D = shuffler([convert_aa_to_codon("D") for x in range(proteinsequence.count('D'))])
-	E = shuffler([convert_aa_to_codon("E") for x in range(proteinsequence.count('E'))])
-	K = shuffler([convert_aa_to_codon("K") for x in range(proteinsequence.count('K'))])
-	R = shuffler([convert_aa_to_codon("R") for x in range(proteinsequence.count('R'))])
-	H = shuffler([convert_aa_to_codon("H") for x in range(proteinsequence.count('H'))])
+	G = shuffler([convert_aa_to_codon("G",codon_freq) for x in range(proteinsequence.count('G'))])
+	A = shuffler([convert_aa_to_codon("A",codon_freq) for x in range(proteinsequence.count('A'))])
+	V = shuffler([convert_aa_to_codon("V",codon_freq) for x in range(proteinsequence.count('V'))])
+	L = shuffler([convert_aa_to_codon("L",codon_freq) for x in range(proteinsequence.count('L'))])
+	I = shuffler([convert_aa_to_codon("I",codon_freq) for x in range(proteinsequence.count('I'))])
+	M = shuffler([convert_aa_to_codon("M",codon_freq) for x in range(proteinsequence.count('M'))])
+	F = shuffler([convert_aa_to_codon("F",codon_freq) for x in range(proteinsequence.count('F'))])
+	W = shuffler([convert_aa_to_codon("W",codon_freq) for x in range(proteinsequence.count('W'))])
+	P = shuffler([convert_aa_to_codon("P",codon_freq) for x in range(proteinsequence.count('P'))])
+	S = shuffler([convert_aa_to_codon("S",codon_freq) for x in range(proteinsequence.count('S'))])
+	T = shuffler([convert_aa_to_codon("T",codon_freq) for x in range(proteinsequence.count('T'))])
+	C = shuffler([convert_aa_to_codon("C",codon_freq) for x in range(proteinsequence.count('C'))])
+	Y = shuffler([convert_aa_to_codon("Y",codon_freq) for x in range(proteinsequence.count('Y'))])
+	N = shuffler([convert_aa_to_codon("N",codon_freq) for x in range(proteinsequence.count('N'))])
+	Q = shuffler([convert_aa_to_codon("Q",codon_freq) for x in range(proteinsequence.count('Q'))])
+	D = shuffler([convert_aa_to_codon("D",codon_freq) for x in range(proteinsequence.count('D'))])
+	E = shuffler([convert_aa_to_codon("E",codon_freq) for x in range(proteinsequence.count('E'))])
+	K = shuffler([convert_aa_to_codon("K",codon_freq) for x in range(proteinsequence.count('K'))])
+	R = shuffler([convert_aa_to_codon("R",codon_freq) for x in range(proteinsequence.count('R'))])
+	H = shuffler([convert_aa_to_codon("H",codon_freq) for x in range(proteinsequence.count('H'))])
 	upstreamsequence = ""
 	for x in proteinsequence:
 		value = eval(x).pop(0)
@@ -496,6 +515,9 @@ def makefixedsites(output_seq):
 
 	#iterate through the indices of the output sequence
 	for i in range(len(output_seq)):
+		CHANGEABLE.append(0)
+
+	for i in range(len(output_seq)):
 		#sequence is -35 sequence that cannot change
 		if (i >= 0 and i <= 5):
 			CHANGEABLE[i] = 1
@@ -503,66 +525,81 @@ def makefixedsites(output_seq):
 		elif (i >= 25 and i <=30):
 			CHANGEABLE[i] = 1
 		#the riboswitch that follows the start of the transcription site
-		elif (i >= 35 and i <= 44 + LENGTH_OF_X + LENGTHS[1]):
+		elif (i >= 35 and i <= 35 + LENGTH_OF_X[0]):
 			#for bases in the loop, these can vary since they do not base, and therefore we set CHANGEABLE of these indices to 0
-			if(i >= 35  and i <= 35 + LENGTH_OF_X):
-				if(i >= 35 + LOOP_OFFSET  and i < 35 + LOOP_OFFSET + LOOP_LENGTH):
-					CHANGEABLE[i] = 0
-				#everything else in the riboswitch cannot be changed for the effector to bind properly
-				else:
-					CHANGEABLE[i] = 1
-			#Shine Dalgarno sequence that must br present in the sequence
-			elif(i> 35+LENGTH_OF_X and i <= 41+ LENGTH_OF_X):
-				CHANGEABLE[i] = 1
-			#filler bases that we can arbitrarily change if there is a restriction enzyme/reverse complement present in the output_seq
-			elif(i > 41+LENGTH_OF_X and i <= 43 + LENGTH_OF_X):
+			if(i >= 35 + LOOP_OFFSET[0]  and i <= 35 + LOOP_OFFSET[0] + LOOP_LENGTH[0]):
 				CHANGEABLE[i] = 0
-			#start of the DNA coding region
-			else:	
-				#if the index is not the start of a codon then we cannot change it. (i - 44 - LENGTH_OF_X) is the offset of the CHANGEABLE array from the start of the DNA_SEQ
-				if((i-44-LENGTH_OF_X) %3 != 0):
-					CHANGEABLE[i] = 1
-				else:
-					CHANGEABLE[i] = 0
+			else:
+				#everything else in the riboswitch cannot be changed for the effector to bind properly
+				CHANGEABLE[i] = 1
 				
-		else:
+		#Shine Dalgarno sequence that must br present in the sequence
+		elif(i >= 36+LENGTH_OF_X[0] and i <= 41 + LENGTH_OF_X[0]):
+			CHANGEABLE[i] = 1
+			#filler bases that we can arbitrarily change if there is a restriction enzyme/reverse complement present in the output_seq
+		elif(i >= 42+LENGTH_OF_X[0] and i <= 43 + LENGTH_OF_X[0]):
 			CHANGEABLE[i] = 0
+			#start of the DNA coding region
+		elif(i >= 44 + LENGTH_OF_X[0] and i <= 44+LENGTH_OF_X[0] + LENGTHS[1]):	
+				#if the index is not the start of a codon then we cannot change it. (i - 44 - LENGTH_OF_X) is the offset of the CHANGEABLE array from the start of the DNA_SEQ
+			if((i-44-LENGTH_OF_X[0]) %3 != 0):
+				CHANGEABLE[i] = 1
+			else:
+				CHANGEABLE[i] = 0
+		
+		elif(i >44+LENGTH_OF_X[0] + LENGTHS[1] and i <= 44+LENGTH_OF_X[0] +LENGTHS[1] + FILLER_SIZE[0]):
+			CHANGEABLE[i] = 0		
+		else:
+			#CHANGEABLE[i] = 0
 			#filler sequence before the terminator sequence that we can arbitrarily change by basepair
-			#if(i <= 44+LENGTH_OF_X+LENGTHS[1] + FILLER_SIZE):
-				#CHANGEABLE[i] = 0
+			
 			#terminator sequence that we cannot change
-			#else:
-				#CHANGEABLE[i] = 1
+		
+			CHANGEABLE[i] = 1
+			
 
-def checkconstraints(output_seq,aa_sequence):
+def checkconstraints(output_seq,aa_sequence,codon_freq):
 	#Store the array of all of the fixed sites of the output sequence
 	SITES_NEEDED = makefixedsites(output_seq)
-
+	output_list = []
+	output = ''
+	for seq in output_seq:
+		output_list.append(seq)
+	bases_list = ['A', 'C','T','G']
 	#Keep changing the sequence until we find a valid sequence
 	while(validseq(output_seq) == False):
+		print("is not a valid sequence")
 		#for all of the restriction sites, check where the restriction strict occurs, and store that in the variable index
+		
 		for site in SITES:
-			index = output_seq.index(site)
+			index = output_seq.find(site)
 			#if the CHANGEABLE list suggests that we cannot change the certain base, lets keep incrementing the index
 			while(CHANGEABLE[index] == 1):
-				index +=  1
+				index += 1
+				#print(index)
 			#if the index is within the coding region of the DNA, we have to compute the offset from the index to the start of the DNA sequence
-			if(index > 43 + LENGTH_OF_X and i <= 43 + LENGTH_OF_X + LENGTHS[1]):
-				index_offset = index - 44 - LENGTH_OF_X
+			if(index > 43 + LENGTH_OF_X[0] and index <= 43 + LENGTH_OF_X[0] + LENGTHS[1]):
+				index_offset = index - 44 - LENGTH_OF_X[0]
 				aa_seq_index = index_offset / 3
 				aa_to_replace = aa_sequence[aa_seq_index]
 				#the codon that we want to replace generated by a call to convert_aa_to_codon for the particular amino acid
-				new_codon = convert_aa_to_codon(aa_to_replace)
+				new_codon = convert_aa_to_codon(aa_to_replace,codon_freq)
 				#reassigning the bases of the output_sequence to reflect the new codon
-				output_seq[index] = new_codon[0]
-				output_seq[index+1] = new_codon[1]
-				output_seq[index+2] = new_codon[2]
+				output_list[index] = new_codon[0]
+				output_list[index+1] = new_codon[1]
+				output_list[index+2] = new_codon[2]
+				print("codon changed")
 			#index not in the coding region, we can replace it base by base, so from the list of possible bases, eliminate the current base, and randomly pick a new base
+				output_seq = ''.join(output_list)
 			else:
-				bases_list = ['A', 'C','T','G']
-				bases_list = bases_list.remove(output_seq[index])
-				output_seq[index] = bases_list[random.randint(0,2)]
+				#tmp_list = bases_list.remove(output_list[index])
+				"basepair changed"
+		
+				output_list[index] = bases_list[random.randint(0,3)]
+				output_seq = ''.join(output_list)
 
+	output =''.join(output_list)
+	return output
 
 
 
@@ -573,7 +610,7 @@ def checkconstraints(output_seq,aa_sequence):
 def makevalidDNAseq(dna_sequence,aa_sequence,aa_codon_freq):
 	while validDNAseq():
 		for site in SITES:
-			index = dna_sequence.index(site)
+			index = dna_sequence.find(site)
 			while(index % 3 != 0):
 				index += 1
 			aa_seq_index = index / 3;
@@ -723,10 +760,10 @@ def generate_upstream(filename):
 		for components in riboswitch_comps:
 			riboswitch_sequence += components
 
-		LOOP_OFFSET = len(riboswitch_comps[0]) + len(riboswitch_comps[1]) - 1
-		LOOP_LENGTH = len(riboswitch_comps[2])
+		LOOP_OFFSET.append(len(riboswitch_comps[0]) + len(riboswitch_comps[1]))
+		LOOP_LENGTH.append(len(riboswitch_comps[2]))
 			
-		LENGTH_OF_X = len(riboswitch_sequence)
+		LENGTH_OF_X.append(len(riboswitch_sequence))
 
 
 	else:
@@ -735,10 +772,10 @@ def generate_upstream(filename):
 		for components in riboswitch_comps:
 			riboswitch_sequence += components
 
-		LOOP_OFFSET = len(riboswitch_comps[0]) + len(riboswitch_comps[1]) - 1
-		LOOP_LENGTH = len(riboswitch_comps[2])
+		LOOP_OFFSET.append(len(riboswitch_comps[0]) + len(riboswitch_comps[1]))
+		LOOP_LENGTH.append(len(riboswitch_comps[2]))
 			
-		LENGTH_OF_X = len(riboswitch_sequence)
+		LENGTH_OF_X.append(len(riboswitch_sequence))
 
 
 	upstream_list.append(riboswitch_sequence)
@@ -864,9 +901,11 @@ def generate_terminator():
 	poly_Ttail='T'*rand_Ttail # generate the poly T tail sequence
 
 	rand_chunk=random.randint(15,20) # randomly choose the length of "chunk sequence"
+	FILLER_SIZE.append(rand_chunk)
 	chunk_seq=generate_random_seq(rand_chunk) # generate the chunk sequence
 
-	FILLER_SIZE = len(chunk_seq)
+	
+	
 
 	terminator_sequence=chunk_seq+first_half+middle+second_half+poly_Ttail # concatenate the 5 segments to produce the finalized terminator sequence
 
@@ -926,7 +965,7 @@ output.append(generate_terminator())
 """
 
 
-#output = []
+output = ''
 
 upstream_seq = generate_upstream(EFFECTOR_FILENAME)
 upstreamlength = len(upstream_seq)
@@ -938,7 +977,8 @@ LENGTHS.append(upstreamlength)
 aa_seq = generate_aa_seq(parse_fasta(PROTEIN_FILENAME))
 aaseqlength = len(aa_seq)
 LENGTHS.append(aaseqlength)
-coding_seq = convert_aa_to_dna(aa_seq, parse_codonfreq(CODON_FREQ_FILENAME))
+codon_frequency = parse_codonfreq(CODON_FREQ_FILENAME)
+coding_seq = convert_aa_to_dna(aa_seq, codon_frequency )
 
 #output.append(coding_seq)
 
@@ -952,10 +992,26 @@ N_variant = parse_params(PARAMS_FILENAME)
 
 seq_list = parse_fasta(PROTEIN_FILENAME)
 
-SITES = parse_sites(RESTRIC_ENZ_FILENAME)
+sites = parse_sites(RESTRIC_ENZ_FILENAME)
+for site in sites:
+	SITES.append(site)
+#print(SITES)
 
 sequence = generate_aa_seq(seq_list)
-print(sequence)
+#print(sequence)
 sequence = convert_aa_to_dna(sequence, parse_codonfreq(CODON_FREQ_FILENAME))
-print(sequence)
+
+output = upstream_seq + coding_seq + term_seq
+
+constrainedoutput = checkconstraints(output, aa_seq,codon_frequency)
+
+#print(CHANGEABLE)
+#print(len(CHANGEABLE))
+#print("this is the filler length")
+#print(LOOP_LENGTH)
+
+#print(constrainedoutput)
+#print(len(constrainedoutput))
+
+#print(sequence)
 
