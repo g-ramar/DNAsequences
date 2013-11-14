@@ -324,34 +324,162 @@ def generate_aa_seq(seq_list):
 	returns amino acid sequence (string)
 	"""
 
-	#aa_list will keep track of all of the possible amino acid values for each index.
-	aa_list = []
-	#the aa_sequence that we want to return initialized to the empty string
-	aa_sequence = ''
+	def homologybuilderfinalmega(objectlist):
+		listnonpolar = ["A", "G", "I", "L", "V", "F", "W"]
+		listpolar = ["Y", "N", "C", "Q", "M", "S", "T", "P"]
+		acidic = ["D", "E"]
+		basic = ["R", "H", "K"]
+		allacids = listnonpolar + listpolar + acidic + basic
 
-	#iterate through all of the sequences given in seq_list (from protein.fasta) and create an index_list
-	#index_list stores all of the amino acids in seq_list for a given index
+		def homologybuilderfinal(listobjects):
+			listsequences = [x.sequence for x in listobjects]
+			homologylist = []
+			for i in range(len(listsequences)):
+				for j in range(len(listsequences[i])):
+					try:
+						homologylist[j] += listsequences[i][j]
+					except:
+						homologylist.append(listsequences[i][j])
+			return homologylist
 
-	for i in range(len(seq_list[0].sequence)):
-		index_list = []
-		for seq in seq_list:
-			index_list.append(seq.sequence[i])
-		aa_list.append(index_list)
+		def counterpercent(string, array):
+			#print("counterpercent string: " + string)
+			#print("counterpercent array: " + str(array))
+			count = 0.0
+			for x in array:
+				count += string.count(x)
+			#print("counterpercent: " + str(count))
+			#print("counterpercent return: " + str(count/len(string)))
+			return count/len(string)
 
-	#iterate through the index_lists in aa_list and generate a random amino acid from each index_list and append it to 
-	#the aa_sequence
-	#keeps track of conservancy and variable alignments (amino acids that appear more often have higher chance to be chosen)
-	for alignment_list in aa_list:
-		random_alignment = random.randint(0,len(alignment_list) - 1)
-		aa_sequence += alignment_list[random_alignment]
+		def countertotal(string, value = allacids):
+			maxvalue = 0.0
+			for x in value:
+				maxvalue = max(maxvalue, string.count(x))
+			return maxvalue
 
-	for i in range(len(aa_list)):
-		print("index: {0}\t{1}".format(i, aa_list[i]))
+		def countall(string, value = allacids):
+			count = 0
+			for x in value:
+				if x in string:
+					count += 1
+			return count
 
-	#Might want to insert code here about a random chance that this amino acid doesnt show up to increase diversity of aa_sequence
+		def homologybuilderfinal2(homologylist):
+			homologyliststats = []
+			for x in homologylist:
+				homologyliststats.append([x, [countall(x),
+										  countertotal(x) / len(x),
+										  counterpercent(x, basic),
+										  counterpercent(x, acidic),
+										  counterpercent(x, listnonpolar),
+										  counterpercent(x, listpolar)]])
+			return homologyliststats
 
-	return aa_sequence
+		"""homologyliststats of form [['string', [statsvalues]], ...]"""
+		def homologybuilderfinal3(homologyliststats):
+			finalsequence = ""
+			for x in homologyliststats:
+				if x[1][0] < 6 or x[1][1] > .50:
+					finalsequence += random.choice(x[0])
+				else:
+					basicval = x[1][2]
+					acidicval = basicval + x[1][3]
+					nonpolarval = acidicval + x[1][4]
+					polarval = nonpolarval + x[1][5]
+					randomnum = random.random()
 
+					#print(x)
+
+					if randomnum <= basicval:
+						#print("basicval")
+						finalsequence += random.choice(basic)
+					elif randomnum <= acidicval:
+						#print("acidicval")
+						finalsequence += random.choice(acidic)
+					elif randomnum <= nonpolarval:
+						#print("nonpolarval")
+						finalsequence += random.choice(listnonpolar)
+					elif randomnum <= polarval:
+						#print("else")
+						finalsequence += random.choice(listpolar)
+			return finalsequence
+
+		return homologybuilderfinal3(homologybuilderfinal2(homologybuilderfinal(objectlist)))
+
+	return homologybuilderfinalmega(seq_list)
+
+
+def convert_aa_to_dna(aa_sequence, codon_freq):
+	"""Given an amino acid sequence and the amino acid codon frequencies, 
+	generates the dna sequence that codes for the aa sequence.
+
+	aa_sequence - amino acid sequence (string)
+	codon_freq - codons and their (weighted) frequencies (string)
+
+	returns dna sequence (string)
+	"""
+	proteinsequence = aa_sequence
+
+	def convert_aa_to_codon(aa):
+		"""converts a given amino acid to a codon by using the codon frequency table
+		aa - amino acid (string)
+
+		returns codon (string)
+		"""
+		listof_codons = AMINO_ACID_TO_CODON[aa]
+
+		upto = 0
+		for codon in listof_codons:
+			rand_num = random.random()
+			upto = upto + codon_freq[codon.lower()]
+			if rand_num < upto:
+				return codon
+
+		#error handling, code shoudn't reach here since a codon should be returned in the for loop
+		assert False, "convert_aa_to_codon failed, codon not returned"
+
+	def shuffler(x, n = 1000):
+		count = 0
+		def listwrong(x2):
+			for i in range(len(x2) - 2):
+				if x2[i] == x2[i+1]:
+					return True
+			return False
+
+		while (listwrong(x) and count < n):
+			count += 1
+			value = x.pop(0)
+			index = int(random.random() * len(x))
+			x.append(x[index])
+			x[index] = value
+		return x
+		
+	G = shuffler([convert_aa_to_codon("G") for x in range(proteinsequence.count('G'))])
+	A = shuffler([convert_aa_to_codon("A") for x in range(proteinsequence.count('A'))])
+	V = shuffler([convert_aa_to_codon("V") for x in range(proteinsequence.count('V'))])
+	L = shuffler([convert_aa_to_codon("L") for x in range(proteinsequence.count('L'))])
+	I = shuffler([convert_aa_to_codon("I") for x in range(proteinsequence.count('I'))])
+	M = shuffler([convert_aa_to_codon("M") for x in range(proteinsequence.count('M'))])
+	F = shuffler([convert_aa_to_codon("F") for x in range(proteinsequence.count('F'))])
+	W = shuffler([convert_aa_to_codon("W") for x in range(proteinsequence.count('W'))])
+	P = shuffler([convert_aa_to_codon("P") for x in range(proteinsequence.count('P'))])
+	S = shuffler([convert_aa_to_codon("S") for x in range(proteinsequence.count('S'))])
+	T = shuffler([convert_aa_to_codon("T") for x in range(proteinsequence.count('T'))])
+	C = shuffler([convert_aa_to_codon("C") for x in range(proteinsequence.count('C'))])
+	Y = shuffler([convert_aa_to_codon("Y") for x in range(proteinsequence.count('Y'))])
+	N = shuffler([convert_aa_to_codon("N") for x in range(proteinsequence.count('N'))])
+	Q = shuffler([convert_aa_to_codon("Q") for x in range(proteinsequence.count('Q'))])
+	D = shuffler([convert_aa_to_codon("D") for x in range(proteinsequence.count('D'))])
+	E = shuffler([convert_aa_to_codon("E") for x in range(proteinsequence.count('E'))])
+	K = shuffler([convert_aa_to_codon("K") for x in range(proteinsequence.count('K'))])
+	R = shuffler([convert_aa_to_codon("R") for x in range(proteinsequence.count('R'))])
+	H = shuffler([convert_aa_to_codon("H") for x in range(proteinsequence.count('H'))])
+	upstreamsequence = ""
+	for x in proteinsequence:
+		value = eval(x).pop(0)
+		upstreamsequence += value
+	return upstreamsequence
 
 def makefixedsites(output_seq):
 
@@ -442,37 +570,7 @@ def checkconstraints(output_seq,aa_sequence):
 
 
 
-def convert_aa_to_dna(aa_sequence, codon_freq):
-	"""Given an amino acid sequence and the amino acid codon frequencies, 
-	generates the dna sequence that codes for the aa sequence.
 
-	aa_sequence - amino acid sequence (string)
-	codon_freq - codons and their (weighted) frequencies (string)
-
-	returns dna sequence (string)
-	"""
-	dna_sequence = ''
-	for amino_acid in aa_sequence:
-		dna_sequence += convert_aa_to_codon(amino_acid)          
-	return dna_sequence.lowercase
-
-	def convert_aa_to_codon(aa):
-		"""converts a given amino acid to a codon by using the codon frequency table
-		aa - amino acid (string)
-
-		returns codon (string)
-		"""
-		listof_codons = AMINO_ACID_TO_CODON[aa]
-
-		upto = 0
-		for codon in listof_codons:
-			rand_num = random.random()
-			upto = upto + codon_freq[codon]
-			if random_num < upto:
-				return codon
-
-		#error handling, code shoudn't reach here since a codon should be returned in the for loop
-		assert False, "convert_aa_to_codon failed, codon not returned"
 
 def makevalidDNAseq(dna_sequence,aa_sequence,aa_codon_freq):
 	while validDNAseq():
@@ -548,7 +646,17 @@ def generate_upstream(filename):
 
 	riboswitch_sequence = ''
 	if 'a' not in effector:
-		riboswitch_sequence = generate_alternative_riboswitch(effector)
+		riboswitch_comps = generate_alternative_riboswitch(effector)
+		riboswitch_comps = generate_riboswitch(effector)
+		riboswitch_sequence = ''
+		for components in riboswitch_comps:
+			riboswitch_sequence += components
+
+		LOOP_OFFSET = riboswitch_comps[0] + riboswitch_comps[1] - 1
+		LOOP_LENGTH = riboswitch_comps[2].length
+			
+		LENGTH_OF_X = riboswitch_sequence.length
+
 
 	else:
 		riboswitch_comps = generate_riboswitch(effector)
@@ -560,6 +668,7 @@ def generate_upstream(filename):
 		LOOP_LENGTH = riboswitch_comps[2].length
 			
 		LENGTH_OF_X = riboswitch_sequence.length
+
 
 	upstream_list.append(riboswitch_sequence)
 
@@ -582,7 +691,7 @@ def generate_upstream(filename):
 
 		riboswitch_sequence = revcomp_remaining_effector + revcomp_stem_strand + loop + stem_strand
 
-		riboswitch_components = [revcomp_remaining_effector, revcomp_stem_strand, loop, stem_strand]
+		return riboswitch_sequence
 
 	def generate_alternative_riboswitch(effector):
 		edge_base = SHINE_DALGARNO[0]
@@ -621,20 +730,28 @@ def generate_upstream(filename):
 
 			dna_effector = dna_effector[0:i] + rand_base + dna_effector[i + 1:]
 
+		first_filler = ''
+
 		for i in range(1, len(SHINE_DALGARNO)):
 			rand_base = bases.choice()
 			ref_base = base_pair(SHINE_DALGARNO[i])
-			while rand_base != ref_base
+			while rand_base == ref_base:
+				rand_base = bases.choice()
+			first_filler += rand_base
 
+		first_filler = first_filler[::-1]
 
+		riboswitch_sequence = first_filler + comp_base + revcomp_effector + revcomp_filler + loop + filler + dna_effector
+
+		return riboswitch_sequence
 
 
 	upstream_list.append(SHINE_DALGARNO)
 
 	index_end = -8 + len(SHINE_DALGARNO)
-	filler_length
+	filler_length = index_end - 0
 
-	upstream_list.append(generate_random_seq(2))
+	upstream_list.append(generate_random_seq(filler_length))
 
 	return upstream_sequence
 
@@ -696,13 +813,13 @@ def generate_random_loop(length):
 	other_half=''
 	for nuc in half_seq:
 		if nuc == 'A':
-			other_half += random.choise(A_pool)
+			other_half += random.choice(A_pool)
 		elif nuc == 'C':
-			other_half += random.choise(C_pool)
+			other_half += random.choice(C_pool)
 		elif nuc == 'G':
-			other_half += random.choise(G_pool)
+			other_half += random.choice(G_pool)
 		elif nuc == 'T':
-			other_half += random.choise(T_pool)
+			other_half += random.choice(T_pool)
 	# because the entire sequence is to form a loop, the "other_half" needs to be reversed in its order
 	second_half_seq = reversed(other_half)  
 
@@ -719,34 +836,9 @@ def generate_random_loop(length):
 
 	return loop
 
+
+
 def generate_terminator():
-	"""Generates the intrinsic termiantor sequence
-
-	returns terminator sequence (string)
-	"""
-
-	# first produce a CG-rich segment (of a random length) and name it "first_half"
-	# produce its reverse complement and name it "second_half";
-	# generate a short sequence composed of randomly picked nucleotides (and of random length) to connect these two segments to form a hairpin loop and name it "middle";
-	# generate a poly T tail of a random length and name it "poly_Ttail"; this will be complemented to produce poly U tail;
-	# concatenate the segments in the order of "first_half"+"middle"+"second_half"+"poly_Ttail"
-
-	rand_first=random.randint(6,12) # randomly choose the length of the CG-rich portion of terminator, the sequence called "first_half"
-	first_half = generate_random_seq(rand_first,True) # produce a CG-rich sequence 
-
-	second_half=reverse_complement(first_half) # produce reverse complementary sequence of first_half 
-
-	middle = generate_random_seq() # produce the loop portion 
-
-	rand_Ttail=random.randint(8,12) # randomly choose the length of poly T tail
-	poly_Ttail='T'*rand_Ttail # generate the poly T tail sequence
-
-	terminator_sequence=first_half+middle+second_half+poly_Ttail # concatenate the 4 segments to produce the finalized terminator sequence
-
-	return terminator_sequence
-
-
-	def generate_terminator():
 	"""Generates the intrinsic termiantor sequence
 
 	returns terminator sequence (string)
@@ -777,6 +869,41 @@ def generate_terminator():
 	terminator_sequence=chunk_seq+first_half+middle+second_half+poly_Ttail # concatenate the 5 segments to produce the finalized terminator sequence
 
 	return terminator_sequence
+
+
+def parse_params(filename):
+	"""Given the file name of a parameters file, parse the file for parameter N.
+
+	filename - file name of parameters file
+
+	returns parameter N
+	"""
+
+	"""
+	TO DO:
+	-use parse fasta
+	"""
+	infile = None
+	try:
+		infile = open(filename, 'r')
+	except IOError:
+		print ("Error: Unable to open Parameters file, " + filename)
+		sys.exit(1)
+
+	#pulls the lines
+	count = 0
+	for line in infile:
+		count += 1
+		if count == 1:
+			try:
+				value = int(line)
+			except ValueError:
+				print("Error: Parameters not castable to int, " + line)
+				sys.exit(1)
+		elif (count >= 1 and line != None):
+			raise IOError("Error: Parameter file not properly formed, " + line)
+				sys.exit(1)
+	return value
 
 
 
