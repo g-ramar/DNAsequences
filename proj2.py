@@ -1,15 +1,20 @@
+#! /usr/bin/python
+
 import random
+import sys
 
 """
 TO DO LIST:
 -[ ] error handle all fasta file input. Make sure it's in actual fasta format
--[ ] method to generate sequence that can function as a riboswitch
+-[x] method to generate sequence that can function as a riboswitch
 -[ ] method to do sequence alignment from protein.fasta to get conserv
 -[ ] check if dna sequences are handled and outputed as lowercase or uppercase
 -[ ] check if defined functions are utilized (like parse_fasta)
 -[ ] add diversity to amino acid sequences
 -[ ] change infile to filename for print statements in except IOError statements
 -[ ] change lists to immutable lists if we don't need to mutate them??
+-[ ] clean up riboswitch function
+-[ ] add junk after stop codon before terminator sequence
 """
 
 
@@ -44,7 +49,6 @@ AMINO_ACID_TO_CODON = {	'I': ['ATT', 'ATC', 'ATA'],
 NEGATIVE_35_SEQUENCE = 'TTGACA' #-35 sequence 'aactgt'
 PRIBNOW_BOX = 'TATAAT' #-10 sequence 'ATATTA'
 SHINE_DALGARNO = 'AGGAGG'
-DEFAULT_EFFECTOR = 'AAUCCUCCGG'
 TETRA_LOOP = 'TTCG'
 UPSTREAM_LENGTH = []
 LENGTHS = []
@@ -65,9 +69,10 @@ EFFECTOR_FILENAME = 'effector.fasta'
 PARAMS_FILENAME = 'params.txt'
 PROTEIN_FILENAME = 'protein.fasta'
 RESTRIC_ENZ_FILENAME = 'sites.fasta'
+OWN_EFFECTOR_FILENAME = 'own_effector.fasta'
 
 #output filename
-
+OUTPUT_FILENAME = 'output.fasta'
 
 SITES =  []
 """
@@ -108,7 +113,7 @@ def write_fasta(seq, outfile):
 	"""
 	assert isinstance(seq, Seq), "Argument seq is not instance of Seq"
 	assert isinstance(outfile, file), "Argument outfile is not instance of file"
-	assert outfile.mode == 'w', "Outfile does not have write permission"
+	assert outfile.mode == 'a', "Outfile does not have write permission"
 
 	outfile.write("{0}\n".format(seq.header))
 	for i in range(0, len(seq.sequence), 80):
@@ -128,8 +133,9 @@ def parse_fasta(filename):
 	try:
 		infile = open(filename, 'r')
 	except IOError:
-		print "Error: Unable to open FASTA file, " + infile
-		sys.exit(1)
+		print "Error: Unable to open FASTA file, " + filename
+		#sys.exit(1)
+		assert False
 
 	#list that will hold Seq objects. this list will be returned at the end of the function
 	seq_list = []
@@ -166,44 +172,6 @@ def parse_fasta(filename):
 
 	return seq_list
 
-
-def parse_params(filename):
-	"""Given the file name of a parameters file, parse the file for parameter N.
-
-	filename - file name of parameters file
-
-	returns parameter N
-	"""
-
-	"""
-	TO DO:
-	-use parse fasta
-	"""
-	infile = None
-	try:
-		infile = open(filename, 'r')
-	except IOError:
-		print ("Error: Unable to open Parameters file, " + filename)
-		sys.exit(1)
-
-	#pulls the lines
-	count = 0
-	for line in infile:
-                count += 1
-		if count == 1:
-                    try:
-                        value = int(line)
-                    except ValueError:
-                        print("Error: Parameters not castable to int, " + line)
-                        sys.exit(1)
-		elif (count >= 1 and line != None):
-		    raise IOError("Error: Parameter file not properly formed, " + line)
-                    sys.exit(1)
-	return value
-    
-N_variant = parse_params(PARAMS_FILENAME)
-
-
 def parse_sites(filename):
 	"""Given the file name of restriction enzyme sites, parse the file into a list of sequences.
 
@@ -220,8 +188,9 @@ def parse_sites(filename):
 	try:
 		infile = open(filename, 'r')
 	except IOError:
-		print "Error: Unable to open Restriction Sites file, " + infile
-		sys.exit(1)
+		print "Error: Unable to open Restriction Sites file, " + filename
+		#sys.exit(1)
+		assert False
 
 	header = ''
 	sites = []
@@ -263,14 +232,11 @@ def reverse_complement(sequence):
 			complement += 'C'
 	return complement
 
-
-
 def validseq(sequence):
-
 	for site in SITES:
 		index = sequence.find(site)
 		if index == -1:
-			print("program continued")
+		
 			continue
 		else:
 			if(CHANGEABLE[index] == 1):
@@ -279,15 +245,14 @@ def validseq(sequence):
 					print("its within the coding segment")
 					return False
 				else:
-					print("progam continued")
+					
 					continue
 					
 			else:
-				"something is wrong here for some reason"
+				
 				return False
 
 	return True
-
 
 def parse_codonfreq(filename):
 	"""Given the file name of a codon frequency txt file, parse the file into a dictionary
@@ -305,8 +270,9 @@ def parse_codonfreq(filename):
 	try:
 		infile = open(filename, 'r')
 	except IOError:
-		print "Error: Unable to open Codon Frequency file, " + infile
-		sys.exit(1)
+		print "Error: Unable to open Codon Frequency file, " + filename
+		#sys.exit(1)
+		assert False
 
 	raw_codon_freqs = {} #dictionary with all codons and its frequency {codon:frequency}
 	weighted_codon_freqs ={}#dictionary with codons and weighted frequency relative to the aa they represent {codon: new frequency}
@@ -424,23 +390,23 @@ def generate_aa_seq(seq_list):
 
 	return homologybuilderfinalmega(seq_list)
 
-def convert_aa_to_codon(aa,codon_freq):
-		"""converts a given amino acid to a codon by using the codon frequency table
-		aa - amino acid (string)
+def convert_aa_to_codon(aa, codon_freq):
+	"""converts a given amino acid to a codon by using the codon frequency table
+	aa - amino acid (string)
 
-		returns codon (string)
-		"""
-		listof_codons = AMINO_ACID_TO_CODON[aa]
+	returns codon (string)
+	"""
+	listof_codons = AMINO_ACID_TO_CODON[aa]
 
-		upto = 0
-		for codon in listof_codons:
-			rand_num = random.random()
-			upto = upto + codon_freq[codon.lower()]
-			if rand_num < upto:
-				return codon
+	upto = 0
+	for codon in listof_codons:
+		rand_num = random.random()
+		upto = upto + codon_freq[codon.lower()]
+		if rand_num < upto:
+			return codon
 
-		#error handling, code shoudn't reach here since a codon should be returned in the for loop
-		assert False, "convert_aa_to_codon failed, codon not returned"
+	#error handling, code shoudn't reach here since a codon should be returned in the for loop
+	assert False, "convert_aa_to_codon failed, codon not returned"
 
 def convert_aa_to_dna(aa_sequence, codon_freq):
 	"""Given an amino acid sequence and the amino acid codon frequencies, 
@@ -452,8 +418,6 @@ def convert_aa_to_dna(aa_sequence, codon_freq):
 	returns dna sequence (string)
 	"""
 	proteinsequence = aa_sequence
-
-	
 
 	def shuffler(x, n = 1000):
 		count = 0
@@ -471,31 +435,33 @@ def convert_aa_to_dna(aa_sequence, codon_freq):
 			x[index] = value
 		return x
 		
-	G = shuffler([convert_aa_to_codon("G",codon_freq) for x in range(proteinsequence.count('G'))])
-	A = shuffler([convert_aa_to_codon("A",codon_freq) for x in range(proteinsequence.count('A'))])
-	V = shuffler([convert_aa_to_codon("V",codon_freq) for x in range(proteinsequence.count('V'))])
-	L = shuffler([convert_aa_to_codon("L",codon_freq) for x in range(proteinsequence.count('L'))])
-	I = shuffler([convert_aa_to_codon("I",codon_freq) for x in range(proteinsequence.count('I'))])
-	M = shuffler([convert_aa_to_codon("M",codon_freq) for x in range(proteinsequence.count('M'))])
-	F = shuffler([convert_aa_to_codon("F",codon_freq) for x in range(proteinsequence.count('F'))])
-	W = shuffler([convert_aa_to_codon("W",codon_freq) for x in range(proteinsequence.count('W'))])
-	P = shuffler([convert_aa_to_codon("P",codon_freq) for x in range(proteinsequence.count('P'))])
-	S = shuffler([convert_aa_to_codon("S",codon_freq) for x in range(proteinsequence.count('S'))])
-	T = shuffler([convert_aa_to_codon("T",codon_freq) for x in range(proteinsequence.count('T'))])
-	C = shuffler([convert_aa_to_codon("C",codon_freq) for x in range(proteinsequence.count('C'))])
-	Y = shuffler([convert_aa_to_codon("Y",codon_freq) for x in range(proteinsequence.count('Y'))])
-	N = shuffler([convert_aa_to_codon("N",codon_freq) for x in range(proteinsequence.count('N'))])
-	Q = shuffler([convert_aa_to_codon("Q",codon_freq) for x in range(proteinsequence.count('Q'))])
-	D = shuffler([convert_aa_to_codon("D",codon_freq) for x in range(proteinsequence.count('D'))])
-	E = shuffler([convert_aa_to_codon("E",codon_freq) for x in range(proteinsequence.count('E'))])
-	K = shuffler([convert_aa_to_codon("K",codon_freq) for x in range(proteinsequence.count('K'))])
-	R = shuffler([convert_aa_to_codon("R",codon_freq) for x in range(proteinsequence.count('R'))])
-	H = shuffler([convert_aa_to_codon("H",codon_freq) for x in range(proteinsequence.count('H'))])
-	upstreamsequence = ""
+	G = shuffler([convert_aa_to_codon("G", codon_freq) for x in range(proteinsequence.count('G'))])
+	A = shuffler([convert_aa_to_codon("A", codon_freq) for x in range(proteinsequence.count('A'))])
+	V = shuffler([convert_aa_to_codon("V", codon_freq) for x in range(proteinsequence.count('V'))])
+	L = shuffler([convert_aa_to_codon("L", codon_freq) for x in range(proteinsequence.count('L'))])
+	I = shuffler([convert_aa_to_codon("I", codon_freq) for x in range(proteinsequence.count('I'))])
+	M = shuffler([convert_aa_to_codon("M", codon_freq) for x in range(proteinsequence.count('M'))])
+	F = shuffler([convert_aa_to_codon("F", codon_freq) for x in range(proteinsequence.count('F'))])
+	W = shuffler([convert_aa_to_codon("W", codon_freq) for x in range(proteinsequence.count('W'))])
+	P = shuffler([convert_aa_to_codon("P", codon_freq) for x in range(proteinsequence.count('P'))])
+	S = shuffler([convert_aa_to_codon("S", codon_freq) for x in range(proteinsequence.count('S'))])
+	T = shuffler([convert_aa_to_codon("T", codon_freq) for x in range(proteinsequence.count('T'))])
+	C = shuffler([convert_aa_to_codon("C", codon_freq) for x in range(proteinsequence.count('C'))])
+	Y = shuffler([convert_aa_to_codon("Y", codon_freq) for x in range(proteinsequence.count('Y'))])
+	N = shuffler([convert_aa_to_codon("N", codon_freq) for x in range(proteinsequence.count('N'))])
+	Q = shuffler([convert_aa_to_codon("Q", codon_freq) for x in range(proteinsequence.count('Q'))])
+	D = shuffler([convert_aa_to_codon("D", codon_freq) for x in range(proteinsequence.count('D'))])
+	E = shuffler([convert_aa_to_codon("E", codon_freq) for x in range(proteinsequence.count('E'))])
+	K = shuffler([convert_aa_to_codon("K", codon_freq) for x in range(proteinsequence.count('K'))])
+	R = shuffler([convert_aa_to_codon("R", codon_freq) for x in range(proteinsequence.count('R'))])
+	H = shuffler([convert_aa_to_codon("H", codon_freq) for x in range(proteinsequence.count('H'))])
+	downstreamsequence = ""
 	for x in proteinsequence:
 		value = eval(x).pop(0)
-		upstreamsequence += value
-	return upstreamsequence
+		downstreamsequence += value
+
+	downstreamsequence += convert_aa_to_codon('STOP', codon_freq)
+	return downstreamsequence
 
 def makefixedsites(output_seq):
 
@@ -532,6 +498,11 @@ def makefixedsites(output_seq):
 			else:
 				#everything else in the riboswitch cannot be changed for the effector to bind properly
 				CHANGEABLE[i] = 1
+
+		elif(i >= LENGTHS[0] and i <=LENGTHS[0] + 2):
+			CHANGEABLE[i] = 1
+		elif(i < LENGTHS[0] + LENGTHS[1] and i>= LENGTHS[0] + LENGTHS[1] - 3):
+			CHANGEABLE[i] = 1
 				
 		#Shine Dalgarno sequence that must br present in the sequence
 		elif(i >= 36+LENGTH_OF_X[0] and i <= 41 + LENGTH_OF_X[0]):
@@ -549,13 +520,14 @@ def makefixedsites(output_seq):
 		
 		elif(i >44+LENGTH_OF_X[0] + LENGTHS[1] and i <= 44+LENGTH_OF_X[0] +LENGTHS[1] + FILLER_SIZE[0]):
 			CHANGEABLE[i] = 0		
-		else:
+		elif (i > 44+LENGTH_OF_X[0] +LENGTHS[1] + FILLER_SIZE[0]):
+			CHANGEABLE[i] = 1
 			#CHANGEABLE[i] = 0
 			#filler sequence before the terminator sequence that we can arbitrarily change by basepair
 			
 			#terminator sequence that we cannot change
-		
-			CHANGEABLE[i] = 1
+		else:
+			CHANGEABLE[i] = 0
 			
 
 def checkconstraints(output_seq,aa_sequence,codon_freq):
@@ -601,12 +573,6 @@ def checkconstraints(output_seq,aa_sequence,codon_freq):
 	output =''.join(output_list)
 	return output
 
-
-
-
-
-
-
 def makevalidDNAseq(dna_sequence,aa_sequence,aa_codon_freq):
 	while validDNAseq():
 		for site in SITES:
@@ -632,7 +598,7 @@ def DNAstrandtoRNA(dna_sequence):
 
 	return rna_sequence
 
-def generate_upstream(filename):
+def generate_upstream(filename, dna_codon_seq):
 	"""Given the file name for the effector, generates the promoter sequence and a functional riboswitch sequence.
 
 	filename - file name of effector file (string)
@@ -669,7 +635,7 @@ def generate_upstream(filename):
 
 		stem_strand = generate_random_seq(random.randint(10,20), True) + effector_in_stem
 		revcomp_stem_strand = reverse_complement(stem_strand)
-		loop = TETRA_LOOP #or generate_random_loop(random.int(5, 8))
+		loop = generate_random_loop(random.int(4, 6))
 
 		revcomp_remaining_effector = reverse_complement(remaining_effector)
 
@@ -729,8 +695,25 @@ def generate_upstream(filename):
 
 		return riboswitch_sequence
 
+	def generate_default_riboswitch(effector, codon_seq):
+		revcomp_effector = reverse_complement(effector)
+		partial_loop = 'taa'
+
+		start = len(codon_seq)/10
+		filler = codon_seq[start:random.randint(start+10, len(codon_seq) - 1)]
+		revcomp_filler = reverse_complement(filler)
+		POST_SD = generate_random_seq(6)
+		post_sd_seq = POST_SD+ codon_seq[:len(codon_seq)/2]
+		revcomp_post_sd_seq = reverse_complement(post_sd_seq)
+
+		riboswitch_sequence = [revcomp_post_sd_seq, revcomp_effector, partial_loop,POST_SD]
+
+		#riboswitch_sequence = ''.join(riboswitch_sequence)
+
+		return riboswitch_sequence 
 
 	upstream_list = []
+	POST_SD = ''
 
 	#-35 sequence
 	upstream_list.append(NEGATIVE_35_SEQUENCE)
@@ -749,9 +732,19 @@ def generate_upstream(filename):
 
 	upstream_list.append(generate_random_seq(filler_length))
 
-	seq_list = parse_fasta(filename)
-	effector = seq_list[0].sequence
+	"""NEW EFFECTOR CODE BELOW. USES GENERATE_DEFAULT_RIBOSWITCH METHOD"""
+	effector = parse_fasta(OWN_EFFECTOR_FILENAME)[0].sequence
+	riboswitch_comps = generate_default_riboswitch(effector, dna_codon_seq)
+	LOOP_OFFSET.append(len(riboswitch_comps[0]) + len(riboswitch_comps[1]))
+	LOOP_LENGTH.append(len(riboswitch_comps[2]))
+	POST_SD = riboswitch_comps.pop(3)
+	riboswitch_sequence = ''
+	riboswitch_sequence = ''.join(riboswitch_comps)
+	LENGTH_OF_X.append(len(riboswitch_sequence))
 
+
+
+	"""THIS CHUNK OF CODE NO LONGER USED BUT STILL NEED TO UPDATE INDEX STUFF""
 	riboswitch_sequence = ''
 	if 'a' not in effector:
 		riboswitch_comps = generate_alternative_riboswitch(effector)
@@ -776,19 +769,18 @@ def generate_upstream(filename):
 		LOOP_LENGTH.append(len(riboswitch_comps[2]))
 			
 		LENGTH_OF_X.append(len(riboswitch_sequence))
-
+	"""
 
 	upstream_list.append(riboswitch_sequence)
 
 	upstream_list.append(SHINE_DALGARNO)
 
 	index_end = -8 + len(SHINE_DALGARNO)
-	filler_length = index_end - 0
+	filler_length = 0 - index_end
 
-	upstream_list.append(generate_random_seq(filler_length))
-	upstream_sequence = ''
-	upstream_sequence = ''.join(upstream_list)
-	return upstream_sequence
+	upstream_list.append(POST_SD)
+
+	return ''.join(upstream_list)
 
 def generate_random_seq(length, cg_rich=False):
 	"""Generates a random DNA sequence with the given length. If cg_rich == True, then the random sequence
@@ -801,22 +793,24 @@ def generate_random_seq(length, cg_rich=False):
 	"""
 	sequence = ''
 	if cg_rich:
-		CG_num=length*3/4 # the number of C's and G's will always be at least 75 percent of the length of the entire sequence
+		CG_num=round(length*0.75) # the number of C's and G's will always be at least 75 percent of the length of the entire sequence
 		rand_CG_num=random.randint(CG_num,length) # the number of C's and G's will be between 75% and 100% of the entire sequence length
 		CGpool=['C','G']
+		CGseq = ''
 		for i in range(rand_CG_num):
-			CGseq=random.choice(CGpool)
+			CGseq+=random.choice(CGpool)
 		
-		AT_number=length-CG_num # the A's and T's will fill in the rest of the sequence
+		AT_number=int(length)-int(CG_num) # the A's and T's will fill in the rest of the sequence
 		ATpool=['A','T']
+		ATseq = ''
 		for j in range(AT_number):
-			ATseq=random.choice(ATpool)
+			ATseq+=random.choice(ATpool)
 
 		comb=CGseq+ATseq # combine CGseq and ATseq
-		seq_list = []
+		comb_list = []
 		for c in comb:
-			seq_list.append(c)
-		sequence=''.join(random.sample(seq_list,len(seq_list))) # shuffle the order of nucleotide
+			comb_list.append(c)
+		sequence=''.join(random.sample(comb_list, len(comb_list))) # shuffle the order of nucleotide
 
 
 	else :
@@ -860,7 +854,7 @@ def generate_random_loop(length):
 		elif nuc == 'T':
 			other_half += random.choice(T_pool)
 	# because the entire sequence is to form a loop, the "other_half" needs to be reversed in its order
-	second_half_seq = other_half[::-1] 
+	second_half_seq = other_half[::-1]
 
 	# determine if rand is an odd number;
 	# if it is an even number, concatenate "first_half_seq" and "second_half_seq" and output the resulting sequence;
@@ -875,8 +869,6 @@ def generate_random_loop(length):
 
 	return loop
 
-
-
 def generate_terminator():
 	"""Generates the intrinsic termiantor sequence
 
@@ -890,7 +882,8 @@ def generate_terminator():
 	# produce a random sequence to elongate one end of the terminator for the purpose of riboswitch (named "chunk");
 	# concatenate the segments in the order of "chunk_seq"+first_half"+"middle"+"second_half"+"poly_Ttail"
 
-	rand_first=random.randint(6,12) # randomly choose the length of the CG-rich portion of terminator, the sequence called "first_half"
+	print("generating new sequence")
+	rand_first=random.randint(25,40) # randomly choose the length of the CG-rich portion of terminator, the sequence called "first_half"
 	first_half = generate_random_seq(rand_first,True) # produce a CG-rich sequence 
 
 	second_half=reverse_complement(first_half) # produce reverse complementary sequence of first_half 
@@ -902,15 +895,11 @@ def generate_terminator():
 
 	rand_chunk=random.randint(15,20) # randomly choose the length of "chunk sequence"
 	FILLER_SIZE.append(rand_chunk)
-	chunk_seq=generate_random_seq(rand_chunk) # generate the chunk sequence
-
-	
-	
+	chunk_seq=generate_random_seq(rand_chunk) # generate the chunk sequenceå
 
 	terminator_sequence=chunk_seq+first_half+middle+second_half+poly_Ttail # concatenate the 5 segments to produce the finalized terminator sequence
 
 	return terminator_sequence
-
 
 def parse_params(filename):
 	"""Given the file name of a parameters file, parse the file for parameter N.
@@ -929,7 +918,8 @@ def parse_params(filename):
 		infile = open(filename, 'r')
 	except IOError:
 		print ("Error: Unable to open Parameters file, " + filename)
-		sys.exit(1)
+		#sys.exit(1)
+		assert False
 
 	#pulls the lines
 	count = 0
@@ -940,70 +930,106 @@ def parse_params(filename):
 				value = int(line)
 			except ValueError:
 				print("Error: Parameters not castable to int, " + line)
-				sys.exit(1)
+				#sys.exit(1)
+				assert False
 		elif (count >= 1 and line != None):
 			raise IOError("Error: Parameter file not properly formed, " + line)
-			sys.exit(1)
+			#sys.exit(1)
+			assert False
 	return value
 
 
-
-"""
+"""	
 MAIN FUNCTION
 """
+
 """
+N_variant = parse_params(PARAMS_FILENAME)
+
 output = []
 
-output.append(generate_upstream(EFFECTOR_FILENAME))
+output.append("placeholder")
 
-aa_seq = generate_aa_seq(PROTEIN_FILENAME)
+aa_seq = generate_aa_seq(parse_fasta(PROTEIN_FILENAME))
 coding_seq = convert_aa_to_dna(aa_seq, parse_codonfreq(CODON_FREQ_FILENAME))
 
 output.append(coding_seq)
-
 output.append(generate_terminator())
+
+upstream = generate_upstream(parse_fasta(OWN_EFFECTOR_FILENAME), coding_seq)
+output[0] = upstream
+print(output[0])
+
+new_sequence = ''.join(output)
+
+print(new_sequence)
+write_fasta(Seq('>output', new_sequence), open('output.txt', 'w'))
 """
 
-
-output = ''
-
-upstream_seq = generate_upstream(EFFECTOR_FILENAME)
-upstreamlength = len(upstream_seq)
-LENGTHS.append(upstreamlength)
-#output.append(upstream_seq)
-
-
-
-aa_seq = generate_aa_seq(parse_fasta(PROTEIN_FILENAME))
-aaseqlength = len(aa_seq)
-LENGTHS.append(aaseqlength)
-codon_frequency = parse_codonfreq(CODON_FREQ_FILENAME)
-coding_seq = convert_aa_to_dna(aa_seq, codon_frequency )
-
-#output.append(coding_seq)
-
-term_seq = generate_terminator()
-termseqlength = len(term_seq)
-LENGTHS.append(termseqlength)
-#output.append(term_seq)
-
-
 N_variant = parse_params(PARAMS_FILENAME)
+outfile = open(OUTPUT_FILENAME, 'a')
 
-seq_list = parse_fasta(PROTEIN_FILENAME)
+for n in range(1):
 
-sites = parse_sites(RESTRIC_ENZ_FILENAME)
-for site in sites:
-	SITES.append(site)
-#print(SITES)
+	UPSTREAM_LENGTH = []
+	LENGTHS = []
+	CHANGEABLE= []
+	LENGTH_OF_X = []
+	LOOP_OFFSET = []
+	LOOP_LENGTH = []
+	FILLER_SIZE = []
+	SITES =  []
 
-sequence = generate_aa_seq(seq_list)
-#print(sequence)
-sequence = convert_aa_to_dna(sequence, parse_codonfreq(CODON_FREQ_FILENAME))
 
-output = upstream_seq + coding_seq + term_seq
 
-constrainedoutput = checkconstraints(output, aa_seq,codon_frequency)
+	aa_seq = generate_aa_seq(parse_fasta(PROTEIN_FILENAME))
+
+	
+	codon_frequency = parse_codonfreq(CODON_FREQ_FILENAME)
+	coding_seq = convert_aa_to_dna(aa_seq, codon_frequency)
+	
+
+	term_seq = generate_terminator()
+	termseqlength = len(term_seq)
+	
+
+	upstream_seq = generate_upstream(OWN_EFFECTOR_FILENAME, coding_seq)
+	upstreamlength = len(upstream_seq)
+	LENGTHS.append(upstreamlength)
+
+	LENGTHS.append(len(coding_seq))
+
+	LENGTHS.append(termseqlength)
+	sites = parse_sites(RESTRIC_ENZ_FILENAME)
+	effector_site = parse_fasta(OWN_EFFECTOR_FILENAME)
+	effectorcheck = effector_site[0].sequence
+	rcompeffector = reverse_complement(effectorcheck)
+	SITES.append(effectorcheck)
+	SITES.append(rcompeffector)
+	for site in sites:
+		SITES.append(site)
+
+
+	"""OUTPUT IN STRING FORMAT"""
+	output = upstream_seq + coding_seq + term_seq
+
+	constrainedoutput = checkconstraints(output, aa_seq,codon_frequency)
+	constrainedoutput_list = []
+	for outputs in constrainedoutput.lower():
+		constrainedoutput_list.append(outputs)
+	for i in range(len(constrainedoutput_list)):
+		if(i >= LENGTHS[0] and i <=LENGTHS[0] + 2):
+			constrainedoutput_list[i] = constrainedoutput_list[i].upper()
+		if(i < LENGTHS[0] + LENGTHS[1] and i>= LENGTHS[0] + LENGTHS[1] - 3):
+			print ("The upper case: " + constrainedoutput_list[i].upper())
+			constrainedoutput_list[i] = constrainedoutput_list[i].upper()
+
+	finaloutput = ''
+	finaloutput = ''.join(constrainedoutput_list)
+
+	print(finaloutput)
+	print(CHANGEABLE)
+	write_fasta(Seq('>output {0}'.format(n), finaloutput), outfile)
 
 #print(CHANGEABLE)
 #print(len(CHANGEABLE))
@@ -1014,4 +1040,3 @@ constrainedoutput = checkconstraints(output, aa_seq,codon_frequency)
 #print(len(constrainedoutput))
 
 #print(sequence)
-
